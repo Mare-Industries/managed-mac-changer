@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lib/mac.sh — MAC address randomization
+# lib/mac.sh — MAC address randomization for managed-mac-changer
 
 normalize_mac() { echo "${1,,}"; }
 
@@ -49,9 +49,14 @@ do_randomize_mac() {
   local new_mac; new_mac=$(pick_mac "$group")
 
   mkdir -p "$BACKUP_DIR" && chmod 700 "$BACKUP_DIR"
-  echo "$current" > "${BACKUP_DIR}/${iface}.bak"
-  chmod 600 "${BACKUP_DIR}/${iface}.bak"
-  info "MAC backup for ${iface}: ${current}"
+  local bak="${BACKUP_DIR}/${iface}.bak"
+  if [[ ! -f "$bak" ]]; then
+    install -m 600 /dev/null "$bak"
+    echo "$current" > "$bak"
+    info "MAC backup for ${iface}: ${current}"
+  else
+    info "MAC backup already exists for ${iface} — keeping original."
+  fi
 
   info "MAC: '${current}' → '${new_mac}' on ${iface}"
 

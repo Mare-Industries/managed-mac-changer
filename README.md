@@ -1,4 +1,4 @@
-# identity-randomizer
+# managed-mac-changer
 
 Randomize your Linux hostname and MAC address on every boot. Includes a web UI for managing MAC address groups.
 
@@ -22,8 +22,8 @@ Randomize your Linux hostname and MAC address on every boot. Includes a web UI f
 ## Install
 
 ```bash
-git clone https://github.com/youruser/identity-randomizer.git
-cd identity-randomizer
+git clone https://github.com/Mare-Industries/managed-mac-changer.git
+cd managed-mac-changer
 sudo ./install.sh
 ```
 
@@ -31,22 +31,22 @@ sudo ./install.sh
 
 ```bash
 # Randomize both hostname and MAC
-sudo identity-randomizer
+sudo managed-mac-changer
 
 # Preview without applying
-sudo identity-randomizer --dry-run
+sudo managed-mac-changer --dry-run
 
 # Randomize only MAC, using a specific group
-sudo identity-randomizer --mac-only --group home
+sudo managed-mac-changer --mac-only --group home
 
 # Restore previous hostname and MAC
-sudo identity-randomizer restore
+sudo managed-mac-changer restore
 
 # Show current identity
-identity-randomizer status
+managed-mac-changer status
 
 # Start web UI
-identity-randomizer web
+managed-mac-changer web
 # → http://localhost:7779
 ```
 
@@ -56,10 +56,10 @@ The web UI lets you manage MAC address groups without touching config files.
 
 ```bash
 # Start manually
-identity-randomizer web
+managed-mac-changer web
 
 # Or enable as a persistent service
-sudo systemctl enable --now identity-randomizer-web.service
+sudo systemctl enable --now managed-mac-changer-web.service
 ```
 
 ### Groups
@@ -71,7 +71,7 @@ sudo systemctl enable --now identity-randomizer-web.service
 
 ## Config
 
-Config is stored at `/etc/identity-randomizer/groups.json`. You can edit it directly or use the web UI.
+Config is stored at `/etc/managed-mac-changer/groups.json`. You can edit it directly or use the web UI.
 
 ```json
 {
@@ -92,28 +92,36 @@ Config is stored at `/etc/identity-randomizer/groups.json`. You can edit it dire
 
 ## Boot service
 
-The installer enables `identity-randomizer.service` automatically. It runs once on every boot before the network comes up.
+The installer enables `managed-mac-changer.service` automatically. It runs once on every boot before the network comes up.
 
 ```bash
 # Check status
-sudo systemctl status identity-randomizer.service
+sudo systemctl status managed-mac-changer.service
 
 # View logs
-sudo journalctl -u identity-randomizer.service
+sudo journalctl -u managed-mac-changer.service
 
 # Disable boot randomization
-sudo systemctl disable identity-randomizer.service
+sudo systemctl disable managed-mac-changer.service
 ```
 
 ## Uninstall
 
 ```bash
 sudo ./uninstall.sh
-# Config is preserved at /etc/identity-randomizer — remove manually if desired
+# Config preserved at /etc/managed-mac-changer — remove manually if desired
 ```
+
+## Security
+
+- The web UI binds to `127.0.0.1` only — not exposed on the network. Do not pass `--host 0.0.0.0` unless you understand the risk (no authentication is required to modify groups).
+- The web service runs as an unprivileged system user (`mmc`) created by the installer. Only the config directory `/etc/managed-mac-changer` is writable by that user.
+- Config file and log permissions follow least-privilege (mode 640/600).
+- MAC randomization requires root; the web UI and `status` subcommand do not.
 
 ## Notes
 
 - MAC changes via NetworkManager persist across reconnects but not reboots (by design)
 - Some Wi-Fi drivers enforce the hardware MAC regardless — the script will warn if this happens
-- The web UI binds to `127.0.0.1` only — not exposed on the network
+- If hostname randomization hangs at boot, check `journalctl -u managed-mac-changer.service`; the service has a 30-second timeout
+- If port 7779 is in use, the web service will fail to start — check with `ss -tlnp | grep 7779`

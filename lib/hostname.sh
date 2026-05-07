@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lib/hostname.sh — hostname randomization
+# lib/hostname.sh — hostname randomization for managed-mac-changer
 
 readonly HOST_BACKUP_FILE="${BACKUP_DIR}/hostname.bak"
 readonly MAX_HOSTNAME_LEN=63
@@ -46,7 +46,7 @@ rand_element() {
 }
 
 rand_suffix() {
-  od -An -N2 -tx1 /dev/urandom | tr -d ' \n'
+  od -An -N3 -tx1 /dev/urandom | tr -d ' \n'
 }
 
 validate_hostname() {
@@ -72,22 +72,37 @@ get_current_hostname() {
   hostnamectl --static 2>/dev/null || hostname
 }
 
+_replace_hostname_in_hosts() {
+  local old_h="$1" new_h="$2"
+  [[ -f /etc/hosts ]] || return 0
+  cp /etc/hosts /etc/hosts.bak
+  python3 -c "
+import sys, re
+old, new, path = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(path) as f:
+    content = f.read()
+updated = re.sub(r'\b' + re.escape(old) + r'\b', new, content, flags=re.IGNORECASE)
+with open(path, 'w') as f:
+    f.write(updated)
+" "$old_h" "$new_h" /etc/hosts
+}
+
 do_randomize_hostname() {
   local current; current=$(get_current_hostname)
   local new; new=$(generate_hostname)
 
   mkdir -p "$BACKUP_DIR" && chmod 700 "$BACKUP_DIR"
+  install -m 600 /dev/null "$HOST_BACKUP_FILE"
   echo "$current" > "$HOST_BACKUP_FILE"
-  chmod 600 "$HOST_BACKUP_FILE"
   info "Hostname backup: '${current}'"
 
   info "Hostname: '${current}' → '${new}'"
   hostnamectl set-hostname "$new"
-  [[ -f /etc/hostname ]] && { cp /etc/hostname /etc/hostname.bak; echo "$new" > /etc/hostname; }
-  if [[ -f /etc/hosts ]]; then
-    cp /etc/hosts /etc/hosts.bak
-    sed -i "s/\b$(echo "$current" | sed 's/[.[\*^$]/\\&/g')\b/${new}/gI" /etc/hosts
+  if [[ -f /etc/hostname ]]; then
+    cp /etc/hostname /etc/hostname.bak
+    echo "$new" > /etc/hostname
   fi
+  _replace_hostname_in_hosts "$current" "$new"
   hostname "$new"
   info "Hostname set to '${new}'."
 }
@@ -100,9 +115,7 @@ do_restore_hostname() {
   info "Hostname restore: '${current}' → '${old}'"
   hostnamectl set-hostname "$old"
   [[ -f /etc/hostname ]] && echo "$old" > /etc/hostname
-  if [[ -f /etc/hosts ]]; then
-    sed -i "s/\b$(echo "$current" | sed 's/[.[\*^$]/\\&/g')\b/${old}/gI" /etc/hosts
-  fi
+  _replace_hostname_in_hosts "$current" "$old"
   hostname "$old"
   info "Hostname restored to '${old}'."
 }

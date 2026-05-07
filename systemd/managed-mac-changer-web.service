@@ -1,0 +1,22 @@
+[Unit]
+Description=managed-mac-changer web UI
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 __INSTALL_DIR__/web/server.py --config-dir __CONFIG_DIR__
+Restart=on-failure
+StartLimitIntervalSec=60
+StartLimitBurst=3
+User=mmc
+Group=mmc
+StandardOutput=journal
+StandardError=journal
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=__CONFIG_DIR__
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

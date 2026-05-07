@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# identity-randomizer — main CLI entry point
+# managed-mac-changer — main CLI entry point
 set -euo pipefail
 IFS=$'\n\t'
 
 INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LIB_DIR="${INSTALL_DIR}/lib"
-CONFIG_DIR="${INSTALL_DIR}/config"
+# Allow override via env var; default to the installed config location
+CONFIG_DIR="${MANAGED_MAC_CHANGER_CONFIG_DIR:-/etc/managed-mac-changer}"
 
 source "${LIB_DIR}/config.sh"
 source "${LIB_DIR}/hostname.sh"
@@ -13,10 +14,10 @@ source "${LIB_DIR}/mac.sh"
 
 usage() {
   cat <<EOF
-identity-randomizer — randomize hostname and MAC address
+managed-mac-changer — randomize hostname and MAC address
 
 Usage:
-  sudo identity-randomizer [OPTIONS]
+  sudo managed-mac-changer [OPTIONS]
 
 Options:
   randomize            Randomize both hostname and MAC (default)
@@ -31,12 +32,12 @@ Options:
   --help, -h           Show this help
 
 Examples:
-  sudo identity-randomizer
-  sudo identity-randomizer --dry-run
-  sudo identity-randomizer --group home
-  sudo identity-randomizer restore
-  identity-randomizer web
-  identity-randomizer status
+  sudo managed-mac-changer
+  sudo managed-mac-changer --dry-run
+  sudo managed-mac-changer --group home
+  sudo managed-mac-changer restore
+  managed-mac-changer web
+  managed-mac-changer status
 EOF
   exit 0
 }
@@ -56,12 +57,17 @@ cmd_status() {
 
 cmd_web() {
   local web_dir="${INSTALL_DIR}/web"
+  local server="${web_dir}/server.py"
   if ! command -v python3 &>/dev/null; then
     echo "Error: python3 is required for the web UI." >&2
     exit 1
   fi
+  if [[ ! -f "$server" ]]; then
+    echo "Error: web server not found at ${server}" >&2
+    exit 1
+  fi
   echo "Starting web UI at http://localhost:7779 ..."
-  exec python3 "${web_dir}/server.py" --config-dir "${CONFIG_DIR}"
+  exec python3 "$server" --config-dir "${CONFIG_DIR}"
 }
 
 main() {

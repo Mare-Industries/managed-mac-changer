@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-identity-randomizer web UI — MAC group management
+managed-mac-changer web UI — MAC group management
 Runs on http://localhost:7779
 """
 
@@ -54,7 +54,6 @@ def api_response(handler, status, data):
     handler.send_response(status)
     handler.send_header("Content-Type", "application/json")
     handler.send_header("Content-Length", len(body))
-    handler.send_header("Access-Control-Allow-Origin", "*")
     handler.end_headers()
     handler.wfile.write(body)
 
@@ -63,13 +62,6 @@ class Handler(BaseHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
         pass  # suppress default access log
-
-    def do_OPTIONS(self):
-        self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.end_headers()
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -84,6 +76,7 @@ class Handler(BaseHTTPRequestHandler):
             self._api_status()
         else:
             self.send_response(404)
+            self.send_header("Content-Length", "0")
             self.end_headers()
 
     def do_POST(self):
@@ -102,21 +95,32 @@ class Handler(BaseHTTPRequestHandler):
             self._create_group(data)
         elif path.startswith("/api/groups/") and path.endswith("/macs"):
             group = path.split("/")[3]
+            if not validate_group_name(group):
+                api_response(self, 400, {"error": "Invalid group name"}); return
             self._add_mac(group, data)
         elif path.startswith("/api/groups/") and path.endswith("/activate"):
             group = path.split("/")[3]
+            if not validate_group_name(group):
+                api_response(self, 400, {"error": "Invalid group name"}); return
             self._set_group_active(group, True)
         elif path.startswith("/api/groups/") and path.endswith("/deactivate"):
             group = path.split("/")[3]
+            if not validate_group_name(group):
+                api_response(self, 400, {"error": "Invalid group name"}); return
             self._set_group_active(group, False)
         elif path.startswith("/api/groups/") and path.endswith("/exclude"):
             group = path.split("/")[3]
+            if not validate_group_name(group):
+                api_response(self, 400, {"error": "Invalid group name"}); return
             self._set_group_excluded(group, True)
         elif path.startswith("/api/groups/") and path.endswith("/include"):
             group = path.split("/")[3]
+            if not validate_group_name(group):
+                api_response(self, 400, {"error": "Invalid group name"}); return
             self._set_group_excluded(group, False)
         else:
             self.send_response(404)
+            self.send_header("Content-Length", "0")
             self.end_headers()
 
     def do_DELETE(self):
@@ -126,13 +130,18 @@ class Handler(BaseHTTPRequestHandler):
 
         if path.startswith("/api/groups/") and len(parts) == 4:
             group = parts[3]
+            if not validate_group_name(group):
+                api_response(self, 400, {"error": "Invalid group name"}); return
             self._delete_group(group)
         elif path.startswith("/api/groups/") and len(parts) == 6 and parts[4] == "macs":
             group = parts[3]
+            if not validate_group_name(group):
+                api_response(self, 400, {"error": "Invalid group name"}); return
             mac = urllib.parse.unquote(parts[5])
             self._delete_mac(group, mac)
         else:
             self.send_response(404)
+            self.send_header("Content-Length", "0")
             self.end_headers()
 
     # ── API handlers ──────────────────────────────────────────────────────────
@@ -142,12 +151,12 @@ class Handler(BaseHTTPRequestHandler):
         status = {}
         try:
             status["hostname"] = subprocess.check_output(
-                ["hostname"], text=True).strip()
-        except Exception:
+                ["hostname"], text=True, timeout=5).strip()
+        except (subprocess.SubprocessError, OSError):
             status["hostname"] = "unknown"
         try:
             result = subprocess.check_output(
-                ["ip", "-o", "link", "show"], text=True)
+                ["ip", "-o", "link", "show"], text=True, timeout=5)
             iface = None
             for line in result.splitlines():
                 name = line.split(":")[1].strip().split("@")[0]
@@ -163,12 +172,12 @@ class Handler(BaseHTTPRequestHandler):
             status["interface"] = iface or "none"
             if iface:
                 mac_out = subprocess.check_output(
-                    ["ip", "link", "show", iface], text=True)
+                    ["ip", "link", "show", iface], text=True, timeout=5)
                 for line in mac_out.splitlines():
                     if "ether" in line:
                         status["mac"] = line.split()[1]
                         break
-        except Exception:
+        except (subprocess.SubprocessError, OSError, IndexError):
             status["interface"] = "unknown"
             status["mac"] = "unknown"
         api_response(self, 200, status)
@@ -269,14 +278,17 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config-dir", default="/etc/identity-randomizer")
+    parser.add_argument("--config-dir", default="/etc/managed-mac-changer")
     parser.add_argument("--port", type=int, default=7779)
     parser.add_argument("--host", default="127.0.0.1")
     args = parser.parse_args()
 
+    if args.host != "127.0.0.1":
+        print(f"WARNING: binding to {args.host} — web UI will be network-accessible.", flush=True)
+
     Handler.config_dir = args.config_dir
 
-    print(f"identity-randomizer web UI")
+    print(f"managed-mac-changer web UI")
     print(f"  http://{args.host}:{args.port}")
     print(f"  Config: {args.config_dir}")
     print(f"  Press Ctrl+C to stop.")
