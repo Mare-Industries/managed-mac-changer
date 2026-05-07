@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>identity-randomizer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0d0f12;
+    --surface: #13161b;
+    --surface2: #1a1e25;
+    --border: #252a33;
+    --border2: #2e3540;
+    --text: #c9d1dc;
+    --text-dim: #5a6478;
+    --text-muted: #3a4252;
+    --accent: #4af0a0;
+    --accent-dim: #1a4a35;
+    --accent2: #4a9fff;
+    --accent2-dim: #1a2d4a;
+    --danger: #ff4a6a;
+    --danger-dim: #3a1020;
+    --warn: #f0a04a;
+    --warn-dim: #3a2a10;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ── Layout ── */
+  .layout { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+
+  .logo {
+    padding: 20px 18px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .logo-sub {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .nav { padding: 12px 0; flex: 1; }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-dim);
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+    font-family: var(--mono);
+  }
+
+  .nav-item:hover { color: var(--text); background: var(--surface2); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-dim); }
+  .nav-icon { width: 16px; text-align: center; font-size: 14px; }
+
+  .status-bar {
+    padding: 14px 18px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10px;
+  }
+
+  .status-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .status-label { color: var(--text-dim); }
+  .status-value { color: var(--text); }
+  .status-value.ok { color: var(--accent); }
+
+  /* ── Main content ── */
+  .main { flex: 1; padding: 32px; overflow-y: auto; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .page-header {
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .page-title {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .page-desc { color: var(--text-dim); font-size: 13px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 16px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .card-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-body { padding: 18px; }
+
+  /* ── Groups ── */
+  .groups-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+  }
+
+  .group-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+
+  .group-card:hover { border-color: var(--border2); }
+  .group-card.excluded { opacity: 0.55; border-style: dashed; }
+
+  .group-header {
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .group-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .group-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .group-badges { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+  }
+
+  .badge-active { background: var(--accent-dim); color: var(--accent); }
+  .badge-excluded { background: var(--warn-dim); color: var(--warn); }
+  .badge-inactive { background: var(--surface2); color: var(--text-dim); }
+
+  .group-actions { display: flex; gap: 5px; flex-shrink: 0; }
+
+  .group-macs { padding: 10px 16px 14px; }
+
+  .mac-list { list-style: none; margin-bottom: 10px; }
+
+  .mac-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .mac-item:last-child { border-bottom: none; }
+
+  .mac-empty {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 6px 0;
+    font-style: italic;
+  }
+
+  .mac-count {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--surface2);
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+
+  /* ── Add MAC inline form ── */
+  .add-mac-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  /* ── Form elements ── */
+  input[type="text"] {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 7px 10px;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+
+  input[type="text"]:focus { border-color: var(--accent2); }
+  input[type="text"]::placeholder { color: var(--text-muted); }
+
+  /* ── Buttons ── */
+  .btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 7px 14px;
+    border: 1px solid;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .btn-primary {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .btn-primary:hover { background: var(--accent); color: var(--bg); }
+
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--border2);
+    color: var(--text-dim);
+  }
+  .btn-secondary:hover { border-color: var(--text-dim); color: var(--text); }
+
+  .btn-danger {
+    background: transparent;
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+  .btn-danger:hover { background: var(--danger-dim); }
+
+  .btn-warn {
+    background: transparent;
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+  .btn-warn:hover { background: var(--warn-dim); }
+
+  .btn-sm { padding: 4px 9px; font-size: 10px; }
+  .btn-icon { padding: 4px 7px; font-size: 12px; }
+
+  /* ── Create group form ── */
+  .create-form {
+    display: grid;
+    grid-template-columns: 1fr 2fr auto;
+    gap: 10px;
+    align-items: end;
+    padding: 16px;
+    background: var(--surface2);
+    border-radius: 5px;
+    margin-bottom: 24px;
+  }
+
+  .field label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 5px;
+  }
+
+  /* ── Toast ── */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 9999;
+  }
+
+  .toast {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 10px 16px;
+    border-radius: 5px;
+    border: 1px solid;
+    animation: slideIn 0.2s ease;
+    max-width: 320px;
+  }
+
+  .toast-ok { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+  .toast-err { background: var(--danger-dim); border-color: var(--danger); color: var(--danger); }
+
+  @keyframes slideIn {
+    from { transform: translateX(20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* ── Overview stats ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+  }
+
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 2px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-family: var(--mono);
+  }
+
+  /* ── Terminal-style log ── */
+  .terminal {
+    background: #080a0c;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: #6a8a6a;
+    min-height: 80px;
+    max-height: 200px;
+    overflow-y: auto;
+    line-height: 1.8;
+  }
+
+  .terminal .log-ok { color: var(--accent); }
+  .terminal .log-err { color: var(--danger); }
+  .terminal .log-info { color: var(--accent2); }
+
+  hr.divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 24px 0;
+  }
+
+  .section-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-title">id-randomizer</div>
+      <div class="logo-sub">privacy toolbox</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="showPage('overview')">
+        <span class="nav-icon">◈</span> Overview
+      </div>
+      <div class="nav-item" onclick="showPage('groups')">
+        <span class="nav-icon">⊞</span> MAC Groups
+      </div>
+    </nav>
+    <div class="status-bar" id="statusBar">
+      <div class="status-row">
+        <span class="status-label">host</span>
+        <span class="status-value" id="sbHost">—</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">iface</span>
+        <span class="status-value" id="sbIface">—</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">mac</span>
+        <span class="status-value ok" id="sbMac">—</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Overview page -->
+    <div class="page active" id="page-overview">
+      <div class="page-header">
+        <div class="page-title">Overview</div>
+        <div class="page-desc">Current system identity and MAC group status.</div>
+      </div>
+
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card">
+          <div class="stat-value" id="statGroups">—</div>
+          <div class="stat-label">Total Groups</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statActive">—</div>
+          <div class="stat-label">Active</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statExcluded">—</div>
+          <div class="stat-label">Excluded</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statMacs">—</div>
+          <div class="stat-label">Total MACs</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">⬡ System Identity</div>
+        </div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:100px 1fr;gap:10px;font-family:var(--mono);font-size:12px;">
+            <span style="color:var(--text-dim)">Hostname</span>
+            <span id="ovHostname">—</span>
+            <span style="color:var(--text-dim)">Interface</span>
+            <span id="ovIface">—</span>
+            <span style="color:var(--text-dim)">MAC</span>
+            <span style="color:var(--accent)" id="ovMac">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">⊡ Active MAC Pool</div>
+        </div>
+        <div class="card-body">
+          <div id="activeMacPool" style="font-family:var(--mono);font-size:12px;color:var(--text-dim)">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Groups page -->
+    <div class="page" id="page-groups">
+      <div class="page-header">
+        <div class="page-title">MAC Groups</div>
+        <div class="page-desc">Create groups of MAC addresses. Active non-excluded groups are used for randomization.</div>
+      </div>
+
+      <div class="create-form">
+        <div class="field">
+          <label>Group Name</label>
+          <input type="text" id="newGroupName" placeholder="e.g. home" maxlength="32">
+        </div>
+        <div class="field">
+          <label>Description</label>
+          <input type="text" id="newGroupDesc" placeholder="optional description">
+        </div>
+        <button class="btn btn-primary" onclick="createGroup()">+ Create Group</button>
+      </div>
+
+      <div class="section-title">Groups</div>
+      <div class="groups-grid" id="groupsGrid">
+        <div style="color:var(--text-dim);font-family:var(--mono);font-size:12px;">Loading...</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const API = '';
+
+// ── Navigation ──────────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'groups') renderGroups();
+  if (name === 'overview') renderOverview();
+}
+
+// ── API helpers ──────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  const res = await fetch(API + path, opts);
+  return { ok: res.ok, status: res.status, data: await res.json() };
+}
+
+// ── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg, ok = true) {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast ' + (ok ? 'toast-ok' : 'toast-err');
+  t.textContent = (ok ? '✓ ' : '✗ ') + msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ── Overview ─────────────────────────────────────────────────────────────────
+async function renderOverview() {
+  const [statusRes, cfgRes] = await Promise.all([
+    api('GET', '/api/status'),
+    api('GET', '/api/config')
+  ]);
+
+  if (statusRes.ok) {
+    const s = statusRes.data;
+    document.getElementById('ovHostname').textContent = s.hostname || '—';
+    document.getElementById('ovIface').textContent = s.interface || '—';
+    document.getElementById('ovMac').textContent = s.mac || '—';
+    document.getElementById('sbHost').textContent = (s.hostname || '—').substring(0, 14);
+    document.getElementById('sbIface').textContent = s.interface || '—';
+    document.getElementById('sbMac').textContent = s.mac || '—';
+  }
+
+  if (cfgRes.ok) {
+    const cfg = cfgRes.data;
+    const groups = cfg.groups || {};
+    const active = new Set(cfg.active_groups || []);
+    const excluded = new Set(cfg.excluded_groups || []);
+
+    const totalMacs = Object.values(groups).reduce((s, g) => s + (g.macs || []).length, 0);
+    const activeCount = [...active].filter(g => !excluded.has(g)).length;
+
+    document.getElementById('statGroups').textContent = Object.keys(groups).length;
+    document.getElementById('statActive').textContent = activeCount;
+    document.getElementById('statExcluded').textContent = excluded.size;
+    document.getElementById('statMacs').textContent = totalMacs;
+
+    // Active MAC pool
+    const pool = [];
+    for (const [name, group] of Object.entries(groups)) {
+      if (active.has(name) && !excluded.has(name)) {
+        pool.push(...(group.macs || []).map(m => ({ mac: m, group: name })));
+      }
+    }
+
+    const poolEl = document.getElementById('activeMacPool');
+    if (pool.length === 0) {
+      poolEl.innerHTML = '<span style="color:var(--text-muted)">No MACs in active groups. Add some in the MAC Groups tab.</span>';
+    } else {
+      poolEl.innerHTML = pool.map(({ mac, group }) =>
+        `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--accent)">${mac}</span>
+          <span style="color:var(--text-muted)">${group}</span>
+        </div>`
+      ).join('');
+    }
+  }
+}
+
+// ── Groups ───────────────────────────────────────────────────────────────────
+async function renderGroups() {
+  const res = await api('GET', '/api/config');
+  if (!res.ok) { toast('Failed to load config', false); return; }
+
+  const cfg = res.data;
+  const groups = cfg.groups || {};
+  const active = new Set(cfg.active_groups || []);
+  const excluded = new Set(cfg.excluded_groups || []);
+  const grid = document.getElementById('groupsGrid');
+
+  if (Object.keys(groups).length === 0) {
+    grid.innerHTML = '<div style="color:var(--text-dim);font-family:var(--mono);font-size:12px;">No groups yet. Create one above.</div>';
+    return;
+  }
+
+  grid.innerHTML = Object.entries(groups).map(([name, group]) => {
+    const isActive = active.has(name);
+    const isExcluded = excluded.has(name);
+    const macs = group.macs || [];
+
+    const badges = [];
+    if (isActive && !isExcluded) badges.push('<span class="badge badge-active">active</span>');
+    if (isExcluded) badges.push('<span class="badge badge-excluded">excluded</span>');
+    if (!isActive) badges.push('<span class="badge badge-inactive">inactive</span>');
+
+    const macItems = macs.length === 0
+      ? '<li class="mac-empty">no MACs added</li>'
+      : macs.map(mac =>
+          `<li class="mac-item">
+            <span>${mac}</span>
+            <button class="btn btn-icon btn-danger" onclick="deleteMac('${name}','${mac}')" title="Remove">✕</button>
+          </li>`
+        ).join('');
+
+    const toggleActiveBtn = isActive
+      ? `<button class="btn btn-sm btn-warn" onclick="setActive('${name}',false)">Deactivate</button>`
+      : `<button class="btn btn-sm btn-primary" onclick="setActive('${name}',true)">Activate</button>`;
+
+    const toggleExcludeBtn = isExcluded
+      ? `<button class="btn btn-sm btn-secondary" onclick="setExcluded('${name}',false)">Include</button>`
+      : `<button class="btn btn-sm btn-warn" onclick="setExcluded('${name}',true)">Exclude</button>`;
+
+    return `
+    <div class="group-card ${isExcluded ? 'excluded' : ''}" id="group-${name}">
+      <div class="group-header">
+        <div>
+          <div class="group-name">${name}</div>
+          ${group.description ? `<div class="group-desc">${group.description}</div>` : ''}
+          <div class="group-badges">${badges.join('')}
+            <span class="mac-count">${macs.length} MAC${macs.length !== 1 ? 's' : ''}</span>
+          </div>
+        </div>
+        <div class="group-actions">
+          ${toggleActiveBtn}
+          ${toggleExcludeBtn}
+          <button class="btn btn-sm btn-danger" onclick="deleteGroup('${name}')">Delete</button>
+        </div>
+      </div>
+      <div class="group-macs">
+        <ul class="mac-list">${macItems}</ul>
+        <div class="add-mac-row">
+          <input type="text" id="macInput-${name}" placeholder="aa:bb:cc:dd:ee:ff" maxlength="17"
+            onkeydown="if(event.key==='Enter') addMac('${name}')">
+          <button class="btn btn-primary btn-sm" onclick="addMac('${name}')">+ Add MAC</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Group actions ─────────────────────────────────────────────────────────────
+async function createGroup() {
+  const name = document.getElementById('newGroupName').value.trim();
+  const desc = document.getElementById('newGroupDesc').value.trim();
+  if (!name) { toast('Group name is required', false); return; }
+  const res = await api('POST', '/api/groups', { name, description: desc });
+  if (res.ok) {
+    toast(`Group '${name}' created`);
+    document.getElementById('newGroupName').value = '';
+    document.getElementById('newGroupDesc').value = '';
+    renderGroups();
+  } else {
+    toast(res.data.error || 'Failed to create group', false);
+  }
+}
+
+async function deleteGroup(name) {
+  if (!confirm(`Delete group '${name}' and all its MACs?`)) return;
+  const res = await api('DELETE', `/api/groups/${name}`);
+  res.ok ? (toast(`Group '${name}' deleted`), renderGroups())
+          : toast(res.data.error || 'Failed', false);
+}
+
+async function addMac(group) {
+  const input = document.getElementById(`macInput-${group}`);
+  const mac = input.value.trim();
+  if (!mac) return;
+  const res = await api('POST', `/api/groups/${group}/macs`, { mac });
+  if (res.ok) {
+    toast(`MAC added to '${group}'`);
+    input.value = '';
+    renderGroups();
+  } else {
+    toast(res.data.error || 'Failed to add MAC', false);
+  }
+}
+
+async function deleteMac(group, mac) {
+  const res = await api('DELETE', `/api/groups/${encodeURIComponent(group)}/macs/${encodeURIComponent(mac)}`);
+  res.ok ? (toast('MAC removed'), renderGroups())
+          : toast(res.data.error || 'Failed', false);
+}
+
+async function setActive(group, active) {
+  const path = `/api/groups/${group}/${active ? 'activate' : 'deactivate'}`;
+  const res = await api('POST', path);
+  res.ok ? (toast(`Group '${group}' ${active ? 'activated' : 'deactivated'}`), renderGroups())
+          : toast(res.data.error || 'Failed', false);
+}
+
+async function setExcluded(group, excluded) {
+  const path = `/api/groups/${group}/${excluded ? 'exclude' : 'include'}`;
+  const res = await api('POST', path);
+  res.ok ? (toast(`Group '${group}' ${excluded ? 'excluded' : 'included'}`), renderGroups())
+          : toast(res.data.error || 'Failed', false);
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+renderOverview();
+</script>
+</body>
+</html>
