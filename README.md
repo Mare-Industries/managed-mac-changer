@@ -22,7 +22,7 @@ Randomize your Linux hostname and MAC address on every boot. Includes a web UI f
 ## Install
 
 ```bash
-git clone https://github.com/Mare-Industries/managed-mac-changer.git
+git clone -b public https://github.com/Mare-Industries/managed-mac-changer.git
 cd managed-mac-changer
 sudo bash install.sh
 ```
@@ -108,7 +108,7 @@ sudo systemctl disable managed-mac-changer.service
 ## Uninstall
 
 ```bash
-sudo bash install.sh
+sudo bash uninstall.sh
 # Config preserved at /etc/managed-mac-changer — remove manually if desired
 ```
 
