@@ -69,6 +69,15 @@ chown -R "${MMC_USER}:${MMC_USER}" "$CONFIG_DIR"
 chmod 750 "$CONFIG_DIR"
 chmod 640 "${CONFIG_DIR}/groups.json"
 
+echo "  Creating backup dir /var/lib/managed-mac-changer..."
+mkdir -p /var/lib/managed-mac-changer
+chmod 700 /var/lib/managed-mac-changer
+
+# Restore SELinux file contexts if applicable (Fedora/RHEL)
+if command -v restorecon &>/dev/null; then
+  restorecon -r "$INSTALL_DIR" "$CONFIG_DIR" /var/lib/managed-mac-changer 2>/dev/null || true
+fi
+
 # Patch install paths into systemd units
 sed "s|__INSTALL_DIR__|${INSTALL_DIR}|g;s|__CONFIG_DIR__|${CONFIG_DIR}|g" \
   "${INSTALL_DIR}/systemd/managed-mac-changer.service" \
