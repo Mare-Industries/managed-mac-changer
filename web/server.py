@@ -27,12 +27,21 @@ DEFAULT_CONFIG = {
 
 def load_config(config_dir):
     path = Path(config_dir) / "groups.json"
-    if not path.exists():
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except FileNotFoundError:
         path.parent.mkdir(parents=True, exist_ok=True)
         save_config(config_dir, DEFAULT_CONFIG)
         return DEFAULT_CONFIG
-    with open(path) as f:
-        return json.load(f)
+    except PermissionError:
+        print(
+            f"Error: cannot read {path}\n"
+            "The web UI requires membership in the 'mmc' group.\n"
+            "Run: sudo usermod -aG mmc $USER  then log out and back in.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 def save_config(config_dir, cfg):
     path = Path(config_dir) / "groups.json"

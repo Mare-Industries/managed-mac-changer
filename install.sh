@@ -67,7 +67,13 @@ fi
 
 chown -R "${MMC_USER}:${MMC_USER}" "$CONFIG_DIR"
 chmod 750 "$CONFIG_DIR"
-chmod 640 "${CONFIG_DIR}/groups.json"
+chmod 660 "${CONFIG_DIR}/groups.json"
+
+# Add the invoking user to the mmc group so they can run the web UI without root
+if [[ -n "${SUDO_USER:-}" ]]; then
+  echo "  Adding '${SUDO_USER}' to '${MMC_USER}' group..."
+  usermod -aG "$MMC_USER" "$SUDO_USER"
+fi
 
 echo "  Creating backup dir /var/lib/managed-mac-changer..."
 mkdir -p /var/lib/managed-mac-changer
