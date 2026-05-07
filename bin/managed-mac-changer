@@ -3,7 +3,7 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+INSTALL_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 LIB_DIR="${INSTALL_DIR}/lib"
 # Allow override via env var; default to the installed config location
 CONFIG_DIR="${MANAGED_MAC_CHANGER_CONFIG_DIR:-/etc/managed-mac-changer}"
