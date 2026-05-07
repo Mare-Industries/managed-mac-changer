@@ -53,6 +53,14 @@ if [[ ! -f "${CONFIG_DIR}/groups.json" ]]; then
     "default": {
       "description": "Default MAC addresses",
       "macs": []
+    },
+    "EBS": {
+      "description": "EBS MAC addresses",
+      "macs": [
+        "a0:80:69:fa:8e:c6",
+        "a0:80:69:fa:90:8d",
+        "f4:ce:23:93:37:c6"
+      ]
     }
   }
 }
