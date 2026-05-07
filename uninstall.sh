@@ -17,9 +17,12 @@ rm -rf /opt/managed-mac-changer
 rm -rf /var/lib/managed-mac-changer
 rm -f  /var/log/managed-mac-changer.log
 
-# Remove dedicated system user if it exists
+# Remove dedicated system user and group if they exist
 if id mmc &>/dev/null; then
   userdel mmc 2>/dev/null || true
+fi
+if getent group mmc &>/dev/null; then
+  groupdel mmc 2>/dev/null || true
 fi
 
 systemctl daemon-reload

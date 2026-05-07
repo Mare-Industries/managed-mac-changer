@@ -68,9 +68,12 @@ EOF
 fi
 
 # Create dedicated unprivileged system user for the web service
+if ! getent group "$MMC_USER" &>/dev/null; then
+  groupadd -r "$MMC_USER"
+fi
 if ! id "$MMC_USER" &>/dev/null; then
   echo "  Creating system user '${MMC_USER}'..."
-  useradd -r -s /sbin/nologin -d /nonexistent -c "managed-mac-changer web UI" "$MMC_USER"
+  useradd -r -s /sbin/nologin -d /nonexistent -c "managed-mac-changer web UI" -g "$MMC_USER" "$MMC_USER"
 fi
 
 chown -R "${MMC_USER}:${MMC_USER}" "$CONFIG_DIR"
